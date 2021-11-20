@@ -170,7 +170,7 @@ class GroupTimeSeriesSplit:
         )
 
         if (train_size is None) and (n_splits is not None):
-            train_size = n_groups - gap - (test_size + (n_splits - 1) * shift_size)
+            train_size = n_groups - gap - test_size - (n_splits - 1) * shift_size
             self.train_size = train_size
 
             if train_size <= 0:
@@ -181,7 +181,7 @@ class GroupTimeSeriesSplit:
                 )
             train_start_idx = 0
         elif (n_splits is None) and (train_size is not None):
-            n_splits = ((n_groups - train_size - gap - test_size) // shift_size) + 1
+            n_splits = (n_groups - train_size - gap - test_size) // shift_size + 1
             self.n_splits = n_splits
 
             if self.n_splits <= 0:
