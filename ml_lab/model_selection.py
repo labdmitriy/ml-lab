@@ -1,7 +1,7 @@
-"""Implements model selection for time series."""
+"""Implements model selection methods."""
 
 from itertools import groupby
-from typing import Iterable, Iterator, Literal, Optional, Tuple
+from typing import cast, Iterable, Iterator, Literal, Optional, Tuple
 
 import numpy as np
 from sklearn.utils import indexable
@@ -19,7 +19,7 @@ class GroupTimeSeriesSplit:
         gap: int = 0,
         shift_size: int = 1,
         window: Literal['rolling', 'expanding'] = 'rolling'
-    ):
+    ) -> None:
         """Initializes cross validation parameters.
 
         Args:
@@ -36,6 +36,15 @@ class GroupTimeSeriesSplit:
             window (str):
                 Type of the window. Defaults to 'rolling'.
         """
+        if (train_size is None) and (n_splits is None):
+            raise ValueError('Either train_size or n_splits have to be defined')
+
+        if window not in ['rolling', 'expanding']:
+            raise ValueError('Window can be either "rolling" or "expanding"')
+
+        if (train_size is not None) and (window == 'expanding'):
+            raise ValueError('Train size can be specified only with rolling window')
+
         self.test_size = test_size
         self.train_size = train_size
         self.n_splits = n_splits
@@ -50,15 +59,17 @@ class GroupTimeSeriesSplit:
         """Calculates train/test indices based on split parameters.
 
         Args:
-            X (Iterable): Dataset with features.
-            y (Iterable): Dataset with target.
-            groups (Iterable): Array with group numbers.
+            X (Iterable):
+                Dataset with features.
+            y (Iterable):
+                Dataset with target.
+            groups (Iterable):
+                Array with group numbers.
 
         Yields:
-            Iterator[Tuple[np.ndarray, np.ndarray]]: Train/test dataset indices.
+            Iterator[Tuple[np.ndarray, np.ndarray]]:
+                Train/test dataset indices.
         """
-        self._check_split_params()
-
         test_size = self.test_size
         gap = self.gap
         shift_size = self.shift_size
@@ -74,7 +85,7 @@ class GroupTimeSeriesSplit:
         group_seqs = [group[0] for group in groupby(groups)]
         unique_groups, group_starts_idx = np.unique(groups, return_index=True)
         n_groups = _num_samples(unique_groups)
-        self.n_groups = n_groups
+        self._n_groups = n_groups
 
         if group_seqs != sorted(unique_groups):
             raise ValueError('Groups must be presorted in increasing order')
@@ -86,7 +97,10 @@ class GroupTimeSeriesSplit:
         n_samples = _num_samples(X)
 
         # Calculate remaining split params
-        train_size, n_splits, train_start_idx = self._calculate_split_params()
+        self._calculate_split_params()
+        train_size = cast(int, self.train_size)
+        n_splits = cast(int, self.n_splits)
+        train_start_idx = self._train_start_idx
 
         # Calculate start/end indices for initial train/test datasets
         train_end_idx = train_start_idx + train_size
@@ -124,35 +138,29 @@ class GroupTimeSeriesSplit:
         """Calculates number of splits given specified parameters.
 
         Args:
-            X (Iterable): Dataset with features. Defaults to None.
-            y (Optional[Iterable], optional): Dataset with target. Defaults to None.
-            groups (Optional[Iterable], optional): Array with group numbers. Defaults to None.
+            X (Iterable):
+                Dataset with features. Defaults to None.
+            y (Optional[Iterable], optional):
+                Dataset with target. Defaults to None.
+            groups (Optional[Iterable], optional):
+                Array with group numbers. Defaults to None.
 
         Returns:
-            int: Calculated number of splits.
+            int:
+                Calculated number of splits.
         """
         if self.n_splits is not None:
             return self.n_splits
         else:
             raise ValueError('Number of splits is not defined')
 
-    def _check_split_params(self):
-        if (self.train_size is None) and (self.n_splits is None):
-            raise ValueError('Either train_size or n_splits have to be defined')
-
-        if self.window not in ['rolling', 'expanding']:
-            raise ValueError('Window can be either "rolling" or "expanding"')
-
-        if (self.train_size is not None) and (self.window == 'expanding'):
-            raise ValueError('Train size can be specified only with rolling window')
-
-    def _calculate_split_params(self):
+    def _calculate_split_params(self) -> None:
         train_size = self.train_size
         test_size = self.test_size
         n_splits = self.n_splits
         gap = self.gap
         shift_size = self.shift_size
-        n_groups = self.n_groups
+        n_groups = self._n_groups
 
         not_enough_data_error = (
             'Not enough data to split number of groups ({0})'
@@ -161,8 +169,8 @@ class GroupTimeSeriesSplit:
             ' test size ({3}), gap ({4}), shift_size ({5})'
         )
 
-        if train_size is None:
-            train_size = int(n_groups - gap - (test_size + (n_splits - 1) * shift_size))
+        if (train_size is None) and (n_splits is not None):
+            train_size = n_groups - gap - (test_size + (n_splits - 1) * shift_size)
             self.train_size = train_size
 
             if train_size <= 0:
@@ -172,18 +180,18 @@ class GroupTimeSeriesSplit:
                     )
                 )
             train_start_idx = 0
-        elif self.n_splits is None:
+        elif (n_splits is None) and (train_size is not None):
             n_splits = ((n_groups - train_size - gap - test_size) // shift_size) + 1
             self.n_splits = n_splits
 
-            if n_splits <= 0:
+            if self.n_splits <= 0:
                 raise ValueError(
                     not_enough_data_error.format(
                         n_groups, n_splits, train_size, test_size, gap, shift_size
                     )
                 )
             train_start_idx = n_groups - train_size - gap - test_size - (n_splits - 1) * shift_size
-        else:
+        elif (n_splits is not None) and (train_size is not None):
             train_start_idx = n_groups - train_size - gap - test_size - (n_splits - 1) * shift_size
 
             if train_start_idx < 0:
@@ -193,4 +201,4 @@ class GroupTimeSeriesSplit:
                     )
                 )
 
-        return train_size, n_splits, train_start_idx
+        self._train_start_idx = train_start_idx
