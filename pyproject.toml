@@ -22,6 +22,7 @@ yapf = "^0.31.0"
 isort = "^5.10.1"
 mypy = "^0.910"
 pre-commit = "^2.15.0"
+matplotlib = "^3.5.0"
 
 [build-system]
 requires = ["setuptools", "poetry-core>=1.0.0"]
