@@ -1,0 +1,9 @@
+[flake8]
+ignore = W503, D
+max-complexity = 10
+max-line-length = 99
+docstring-convention = google
+import-order-style = google
+inline-quotes = single
+application-import-names = ml_lab
+
