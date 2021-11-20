@@ -59,9 +59,7 @@ class GroupTimeSeriesSplit:
         """
         self._check_split_params()
 
-        # train_size = self.train_size
         test_size = self.test_size
-        # n_splits = self.n_splits
         gap = self.gap
         shift_size = self.shift_size
 
