@@ -110,11 +110,15 @@ class GroupTimeSeriesSplit:
         # Process each split
         for _ in range(n_splits):
             # Calculate train indices range
-            train_idx = np.r_[slice(groups_dict[group_seqs[train_start_idx]], groups_dict[group_seqs[train_end_idx]])]
+            train_idx = np.r_[slice(
+                groups_dict[group_seqs[train_start_idx]], groups_dict[group_seqs[train_end_idx]]
+            )]
 
             # Calculate test indices range
             if test_end_idx < n_groups:
-                test_idx = np.r_[slice(groups_dict[group_seqs[test_start_idx]], groups_dict[group_seqs[test_end_idx]])]
+                test_idx = np.r_[slice(
+                    groups_dict[group_seqs[test_start_idx]], groups_dict[group_seqs[test_end_idx]]
+                )]
             else:
                 test_idx = np.r_[slice(groups_dict[group_seqs[test_start_idx]], n_samples)]
 
